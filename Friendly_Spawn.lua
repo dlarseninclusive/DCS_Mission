@@ -1,52 +1,50 @@
-local spawnInfo = {
-    -- Example for Khasab with multiple airframes
-    ["Khasab"] = {
-        {airframe = "F-5E", count = 3},
-        {airframe = "MiG-21bis", count = 3},
-        {airframe = "Su-25T", count = 2},
-    },
-    -- Additional airbases can be added following the same structure
-}
-function spawnAircraft(airbaseName, airframe, count)
+-- Spawn function using MIST for aircraft at specified airfields
+local function spawnAircraftWithMIST(airbaseName, airframe, count, countryId, side)
+    local airbase = Airbase.getByName(airbaseName)
+    local spawnPoint = airbase:getPoint()
+
     for i = 1, count do
         local groupName = string.format("%s_%s_%d", airbaseName, airframe, i)
-        local countryId = country.id.RUSSIA -- Adjust based on airframe's coalition
-        local airbase = Airbase.getByName(airbaseName)
-        local spawnPoint = airbase:getPoint()
+        local unitName = string.format("%s_Unit_%d", airframe, i)
         
-        local groupData = {
-            ["visible"] = false,
-            ["tasks"] = {},
-            ["uncontrollable"] = false,
-            ["route"] = {points = {}},
-            ["groupId"] = mist.generateGroupId(),
-            ["hidden"] = false,
-            ["units"] = {
+        local groupData = mist.dynAdd{
+            country = countryId,
+            category = 'airplane',
+            name = groupName,
+            payload = {}, -- Define the payload as needed or leave empty for default
+            route = {}, -- Define the route as needed or leave empty for no waypoints
+            units = {
                 [1] = {
-                    ["alt"] = spawnPoint.y,
-                    ["type"] = airframe,
-                    ["name"] = groupName,
-                    ["unitId"] = mist.generateUnitId(),
-                    ["heading"] = 0,
-                    ["skill"] = "Client",
-                    ["x"] = spawnPoint.x + math.random(-100, 100), -- Randomize a bit to prevent spawning at the exact same point
-                    ["y"] = spawnPoint.z + math.random(-100, 100),
-                    ["payload"] = {},
-                    ["playerCanDrive"] = true,
+                    type = airframe,
+                    name = unitName,
+                    alt = spawnPoint.y,
+                    speed = 0,
+                    heading = 0,
+                    x = spawnPoint.x + math.random(-50, 50), -- Adjust randomization as needed
+                    y = spawnPoint.z + math.random(-50, 50),
+                    skill = "Client",
                 },
             },
-            ["name"] = groupName,
-            ["task"] = "Nothing",
-            ["category"] = "plane",
-            ["country"] = countryId,
         }
 
-        -- Spawn the group
-        coalition.addGroup(countryId, Group.Category.AIR, groupData)
+        -- Check if groupData was successfully added, then spawn the group
+        if groupData then
+            mist.dynAddGroup(groupData)
+        else
+            -- Handle the case where the groupData couldn't be added, possibly log or alert
+            env.error("Failed to add group: " .. groupName)
+        end
     end
 end
-for airbaseName, aircraftList in pairs(spawnInfo) do
-    for _, aircraftInfo in ipairs(aircraftList) do
-        spawnAircraft(airbaseName, aircraftInfo.airframe, aircraftInfo.count)
-    end
+
+-- Detailed spawn information
+local spawnInfo = {
+    {airbaseName = "Lar", airframe = "JF-17", count = 2, countryId = country.id.IRAN, side = coalition.side.RED},
+    {airbaseName = "Jiroft", airframe = "F-14A", count = 2, countryId = country.id.IRAN, side = coalition.side.RED},
+    -- Continue adding your aircraft and airfields here
+}
+
+-- Iterate and spawn aircraft using the spawn function
+for _, info in ipairs(spawnInfo) do
+    spawnAircraftWithMIST(info.airbaseName, info.airframe, info.count, info.countryId, info.side)
 end
